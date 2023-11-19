@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script
+      src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
+      integrity="sha384-xnsUQ1tUqsrutBJl0vuf4/hufzLFWW8ZhGnhItfpQ0/BtWgM2uw6YT6BQ5YaKBSM"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script type="text/javascript" src="../scripts/sso.js"></script>
+</head>
+<body>
+    <p id="prompt">ssso</p>
+    <div id="logs"></div>
+
+    <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+    var value = ssoAuth();
+    console.log(value)
+    console.log(value["token"])
+    console.log(value["tid"])
+    var socket = io({
+        extraHeaders : {
+            "token" : value.token,
+            "tid" : value.tid,
+        }
+    })
+    socket.on('connect', () => {
+        console.log("connected to server")
+    })
+    });
+    </script>
+</body>
+</html>

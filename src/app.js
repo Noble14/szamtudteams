@@ -1,43 +1,55 @@
-const restify = require("restify");
-const send = require("send");
-const fs = require("fs");
+// 'use strict';
 
-//Create HTTP server.
-const server = restify.createServer({
-  key: process.env.SSL_KEY_FILE ? fs.readFileSync(process.env.SSL_KEY_FILE) : undefined,
-  certificate: process.env.SSL_CRT_FILE ? fs.readFileSync(process.env.SSL_CRT_FILE) : undefined,
-  formatters: {
-    "text/html": function (req, res, body) {
-      return body;
-    },
-  },
-});
+// const users = []
 
-server.get(
-  "/static/*",
-  restify.plugins.serveStatic({
-    directory: __dirname,
-  })
-);
+// var config = require('config');
+// var express = require('express');
+// var app = express();
+// var path = require('path');
+// const http = require("http").Server(app)
+// const io = require('socket.io')(http);
+// // Add the route for handling tabs
+// var tabs = require('./server/tabs');
+// tabs.setup(app);
 
-server.listen(process.env.port || process.env.PORT || 3333, function () {
-  console.log(`\n${server.name} listening to ${server.url}`);
-});
+// app.use(express.static(path.join(__dirname, 'client')));
+//   app.set('view engine', 'pug');
+//   app.set('views', path.join(__dirname, 'client/views'));
+// // Decide which port to use
+// var port = process.env.PORT ||
+//   config.has("port") ? config.get("port") : 8080;
 
-// Adding tabs to our app. This will setup routes to various views
-// Setup home page
-server.get("/", (req, res, next) => {
-  send(req, __dirname + "/views/hello.html").pipe(res);
-});
+// // Listen for incoming requests
+// app.listen(port, function() {
+//   console.log(`App started listening on port ${port}`);
+// });
 
-server.get("/config", (req, res, next) => {
-  send(req, __dirname + "/views/config.html").pipe(res);
-});
-server.get("/ok", (req, res, next) => {
-  send(req, __dirname + "/views/ok.html").pipe(res);
-});
+//    io.on('connection', (socket)=>{
+//     console.log(`New user connected${socket.id}`);
+//   }); 
+'use strict';
 
-// Setup the static tab
-server.get("/tab", (req, res, next) => {
-  send(req, __dirname + "/views/hello.html").pipe(res);
+const users = [];
+
+const config = require('config');
+const express = require('express');
+const app = express();
+const http = require("http").Server(app);
+const io = require('socket.io')(http);
+const path = require('path');
+
+// Add the route for handling tabs
+const tabs = require('./server/tabs');
+tabs.setup(app, io);
+
+app.use(express.static(path.join(__dirname, 'client')));
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'client/views'));
+
+// Decide which port to use
+const port = process.env.PORT || (config.has("port") ? config.get("port") : 8080);
+
+// Listen for incoming requests
+http.listen(port, function() {
+  console.log(`App started listening on port ${port}`);
 });
