@@ -15,10 +15,10 @@
         microsoftTeams.pages.config.setValidityState(true);
         microsoftTeams.pages.config.registerOnSaveHandler((saveEvent) => {
                 const configPromise = microsoftTeams.pages.config.setConfig({
-                    contentUrl: "https://cardinal-workable-loosely.ngrok-free.app/ok",
-                    websiteUrl: "https://cardinal-workable-loosely.ngrok-free.app/ok",
-                    entityId: "grayIconTab",
-                    suggestedDisplayName: "MyNewTab"
+                    contentUrl: "https://cardinal-workable-loosely.ngrok-free.app/",
+                    websiteUrl: "https://cardinal-workable-loosely.ngrok-free.app/",
+                    entityId: "Tab",
+                    suggestedDisplayName: "Szamtud"
                 });
                 configPromise.
                     then((result) => {
