@@ -30,6 +30,13 @@ server.get("/", (req, res, next) => {
   send(req, __dirname + "/views/hello.html").pipe(res);
 });
 
+server.get("/config", (req, res, next) => {
+  send(req, __dirname + "/views/config.html").pipe(res);
+});
+server.get("/ok", (req, res, next) => {
+  send(req, __dirname + "/views/ok.html").pipe(res);
+});
+
 // Setup the static tab
 server.get("/tab", (req, res, next) => {
   send(req, __dirname + "/views/hello.html").pipe(res);

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script
+      src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
+      integrity="sha384-xnsUQ1tUqsrutBJl0vuf4/hufzLFWW8ZhGnhItfpQ0/BtWgM2uw6YT6BQ5YaKBSM"
+      crossorigin="anonymous"
+    ></script>
+<body>
+    <p id="prompt">No configuration is needed</p>
+
+    <script type="text/javascript">
+        microsoftTeams.app.initialize().then( () => {
+        p = document.getElementById("prompt");
+        microsoftTeams.pages.config.setValidityState(true);
+        microsoftTeams.pages.config.registerOnSaveHandler((saveEvent) => {
+                const configPromise = microsoftTeams.pages.config.setConfig({
+                    contentUrl: "https://cardinal-workable-loosely.ngrok-free.app/ok",
+                    websiteUrl: "https://cardinal-workable-loosely.ngrok-free.app/ok",
+                    entityId: "grayIconTab",
+                    suggestedDisplayName: "MyNewTab"
+                });
+                configPromise.
+                    then((result) => {
+                        console.log(result)
+                        saveEvent.notifySuccess()
+                        p.innerHTML = "hello";
+                    }).
+                    catch((error) => {saveEvent.notifyFailure("failure message")});
+            });
+    });
+    </script>
+</body>
+</html>

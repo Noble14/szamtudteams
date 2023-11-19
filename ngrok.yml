@@ -1,0 +1,10 @@
+authtoken: <<authtoken>> 
+version: 2
+tunnels:
+  website:
+    addr: 8080
+    schemes:
+      - https
+    inspect: false
+    proto: http
+    domain: <<static domain>>
