@@ -1,21 +1,26 @@
 'use strict';
+
 var path = require('path');
 const fetch = require("node-fetch");
 var config = require('config');
 const msal = require('@azure/msal-node');
 const c = require('config');
+const {Client, LogLevel } = require('@microsoft/microsoft-graph-client')
 
 module.exports.setup = function (app, io) {
   var express = require('express')
   const users = []
+
 
   // Creating MSAL client
   const msalClient = new msal.ConfidentialClientApplication({
     auth: {
       clientId: config.get("tab.appId"),
       clientSecret: config.get("tab.clientSecret")
+      // authority : `https://login.microsoftonline.com/${config.get("tab.tenantId")}`
     }
   });
+
 
   io.use((socket, next) => {
     const token = socket.handshake.auth.token
@@ -88,73 +93,76 @@ module.exports.setup = function (app, io) {
     res.render('auth-end', { clientId: clientId });
   });
 
-  app.post('/getloggedinusers', (req, res) =>
-  {
-    var tid = req.body.tid;
-    var token = req.body.token;
-    var mail = req.body.mail;
-    var name = req.body.name;
-    var oboPromise = new Promise((resolve, reject) => {
-      msalClient.acquireTokenOnBehalfOf({
-        authority: `https://login.microsoftonline.com/${tid}`,
-        oboAssertion: token,
-        scopes: scopes,
-        skipCache: false
-      }).then(result => {
-
-            fetch("https://graph.microsoft.com/v1.0/me/",
-              {
-                method: 'GET',
-                headers: {
-                  "accept": "application/json",
-                  "authorization": "bearer " + result.accessToken
-                },
-                mode: 'cors',
-                cache: 'default'
-              })
-              .then((response) => {
-                if (response.ok) {
-                  return response.json();
-                } else {
-                  throw (`Error ${response.status}: ${response.statusText}`);
-                }
-              })
-              .then((profile) => {
-                resolve(profile);
-              })
-      }).catch(error => {
-        reject({ "error": error.errorCode });
-      });
-    });
-
-    oboPromise.then(function (result) {
-      var us = users.map((x) => x.name)
-    
-      res.json(us);
-    }, function (err) {
-      console.log(err); // Error: "It broke"
-      res.json(err);
-    });
-
-  }
-  
-  )
   // ------------------
-  app.post('/userHere', (req, res) => {
+  app.post('/startMeeting', function (req, res) {
     var tid = req.body.tid;
     var token = req.body.token;
-    var mail = req.body.mail;
-    var name = req.body.name;
+    console.log("token helo")
+    console.log(token)
+    console.log("tid helo")
+    console.log(tid)
+    var scopes = ["https://graph.microsoft.com/OnlineMeetings.ReadWrite",
+                  "https://graph.microsoft.com/User.Read"];
 
-    const user = {
-      "name" : name,
-      "mail" : mail,
-      "token" : token
-    }
-    users.push(user);
+    msalClient.acquireTokenOnBehalfOf({
+      authority: `https://login.microsoftonline.com/${tid}`,
+      oboAssertion: token,
+      scopes: scopes,
+    }).then(result => { 
+      const client = Client.init({
+        defaultVersion: "v1.0",
+        debugLogging: true,
+        authProvider: (done) => {
+          done(null, result.accessToken);
+        },
+      });
+      console.log("server side token")
+      console.log(result)
+      const onlineMeeting = {
+        subject : "hello everybody"
+      }
+      client
+        .api("/me/onlineMeetings")
+        .post(onlineMeeting)
+        .then(response => {console.log(`siker\n${JSON.stringify(response, null, 2)}` ); console.log(response.joinUrl); res.json({joinUrl : response.joinUrl})})
+        .catch(err => {
+          console.error("error creating online meeting: ", err)
+          res.status(500).json({error: "error while getting token"})
+        })
+    })
 
-    res.json("200 ok");
+//    msalClient.acquireTokenOnBehalfOf({
+//        authority: `https://login.microsoftonline.com/${tid}`,
+//        oboAssertion: token,
+//        scopes: scopes,
+//        skipCache: false
+//    }).then(result => {
+//      var onlineMeeting = {
+//        "subject" : "hello everybody"
+//      }
+//        fetch("https://graph.microsoft.com/v1.0/me/onlineMeetings",
+//          {
+//            method: 'POST',
+//            headers: {
+//              "accept": "application/json",
+//              "authorization": "bearer " + result.accessToken
+//            },
+//            mode: 'cors',
+//            cache: 'default',
+//            body : JSON.stringify(onlineMeeting)
+//          }).then(response => {
+//            if  (response.ok) {
+//              console.log("itt van minden:")
+//              console.log(response)
+//              res.json(response)
 
+//            } else{
+//              console.log("hello")
+//              console.log(response)
+//              res.json("bad request")
+//            }
+//          })
+//    })
   })
   app.post('/getProfileOnBehalfOf', function (req, res) {
     var tid = req.body.tid;

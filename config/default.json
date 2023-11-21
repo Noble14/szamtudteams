@@ -2,7 +2,8 @@
     "tab" : {
         "appId" : "b0448cc7-5f25-471b-a929-7daad2e30fb4",
         "clientSecret" : "d_P8Q~V7mew6haRnf_4cgGBV38gFTaW1bsCDbcf2",
-        "applicationIdUri" : "api://cardinal-workable-loosely.ngrok-free.app/b0448cc7-5f25-471b-a929-7daad2e30fb4"
+        "applicationIdUri" : "api://cardinal-workable-loosely.ngrok-free.app/b0448cc7-5f25-471b-a929-7daad2e30fb4",
+        "tenantId" : "9bb55eba-0223-47e5-a66e-57abcdce5d99"
     },
     "port" : "8080"
 }

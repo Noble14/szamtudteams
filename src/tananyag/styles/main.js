@@ -70,9 +70,16 @@ function preprocess(){
 			text=text.substring(6,text.length);
 			ps[i].innerHTML="";
 			
+			let teamsButton=document.createElement("button");
+			teamsButton.innerText="kérj segitséget"
+			
+
+
 			ps[i].appendChild(t);
+			ps[i].appendChild(teamsButton);
 			ps[i].innerHTML+=text;
 			ps[i].addEventListener("click", taskClicked);
+			teamsButton.addEventListener("click", callClicked);
 		}
 		else if(ps[i].innerHTML.indexOf("(!Vid)")==0){
 			let text=ps[i].innerText;
@@ -163,6 +170,35 @@ function preprocess(){
 	
 	
 }
+function callClicked(e) {
+	microsoftTeams.app.initialize().then(x => {
+		microsoftTeams.authentication.getAuthToken({scopes : ["OnlineMeetings.ReadWrite"]}).then((result) => {
+			microsoftTeams.app.getContext().then((context) => {
+				tid = context.user.tenant.id
+				fetch('/startMeeting', {
+					method: 'post',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						'tid': tid,
+						'token': result
+					}),
+					mode: 'cors',
+					cache: 'default'
+				}).then( response =>  {
+					if (response.error) {
+						console.log(error)
+					} else {
+						return response.json()
+					}
+				}).then(data =>{
+					console.log(data.joinUrl)
+				})
+			})
+		})
+	})
+}
 function taskClicked(e) {
     let el = e.target;
     //console.log(el);
@@ -170,6 +206,7 @@ function taskClicked(e) {
         el = el.parentNode; //
     }
 
+	callClicked(e)
     let ele = el; //.firstChild
     console.log(e.target.id + " was clicked");
     let newStatus = "";
@@ -399,5 +436,9 @@ function lumos(m=""){
 	}
 	
 }
-window.addEventListener('load', 
-  preprocess(), false);
+window.addEventListener('load',() => { 
+	const script = document.createElement("script")
+	script.src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
+	document.head.appendChild(script)
+	preprocess() 
+  }, false);

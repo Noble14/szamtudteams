@@ -17,6 +17,20 @@
     <div id="logs"></div>
     <div id="users"></div>
     <a href="/static/index.html">kattints ide</a>
+    <script type="text/javascript">
+        console.log(hello)
+        function requestConsent () {
+            microsoftTeams.app.initialize().then(x => {
+                microsoftTeams.authentication.authenticate({
+                    url: window.location.origin + "/auth-start",
+                    width: 600,
+                    height: 535
+                })
+            })
+        }
+
+    </script>
+    <button onclick="requestConsent()">consent</button>
 
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', () => {
