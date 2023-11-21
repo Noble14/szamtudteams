@@ -194,10 +194,8 @@ function authUser (clientSideToken) {
 function getClientSideToken() {
 
     return new Promise((resolve, reject) => {
-        display("1. Get auth token from Microsoft Teams");
         
         microsoftTeams.authentication.getAuthToken().then((result) => {
-            display(result);
 
             resolve(result);
         }).catch((error) => {

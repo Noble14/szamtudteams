@@ -3,6 +3,7 @@ var path = require('path');
 const fetch = require("node-fetch");
 var config = require('config');
 const msal = require('@azure/msal-node');
+const c = require('config');
 
 module.exports.setup = function (app, io) {
   var express = require('express')
@@ -17,32 +18,52 @@ module.exports.setup = function (app, io) {
   });
 
   io.use((socket, next) => {
-    var token = socket.handshake["token"]
-    var tid = socket.handshake["tid"]
-    console.log(token)
-    console.log(tid)
-
-    var l = AuthUser(tid, token)
-    console.log(l)
-    if  (l) {
+    const token = socket.handshake.auth.token
+    var tid = socket.handshake.auth.tid
+    AuthUser(tid, token).then(x => {
+      var user = {
+        id : socket.id,
+        token : token,
+        tid : tid,
+        name : x.displayName,
+        mail : x.mail,
+        page : "null"
+      }
+      console.log(user)
+      users.push(user)
       next();
-    } else {
+    }, err => {
       next(new Error())
-    }
+
+    })
   })
 
   io.on('connection', (socket) => {
     console.log(`New user connected ${socket.id}`);
+    var userNames = users.map(x => x.name)
+    io.emit("new-user", userNames)
 
     // Handle user disconnect
     socket.on('disconnect', () => {
       console.log(`User disconnected ${socket.id}`);
+      var ind = users.findIndex(x => x.id == socket.id)
+      users.splice(ind, 1)
+      var userNames = users.map(x => x.name)
+      io.emit("new-user", userNames)
     });
   });
-
+  const authorizeMiddleware = (req, res, next) => {
+    if (true) {
+      next(); // User is authorized, continue to the next middleware
+    } else {
+      res.status(401).send('Unauthorized'); // User is not authorized, send 401 Unauthorized
+    }
+  };
   // Configure the view engine, views folder and the statics path
   // Use the JSON middleware
   app.use(express.json());
+
+  app.use( '/static', authorizeMiddleware ,express.static(path.join(__dirname,"../tananyag")));
 
     // Setup the configure tab, with first and second as content tabs
   app.get('/config', function (req, res) {
@@ -51,9 +72,6 @@ module.exports.setup = function (app, io) {
 
   app.get('/hello', function (req, res) {
     res.sendFile(path.join(__dirname, '../client/views/hello.html'));
-  });
-  app.get('/ok', function (req, res) {
-    res.sendFile(path.join(__dirname, '../client/views/ok.html'));
   });
   app.get('/sso', function (req, res) {
     res.sendFile(path.join(__dirname, '../client/views/sso.html'));
@@ -229,11 +247,6 @@ module.exports.setup = function (app, io) {
         reject({ "error": error.errorCode });
       });
     });
-    oboPromise.then(function (result) {
-      return true
-    }, function (err) {
-      console.log(err); // Error: "It broke"
-      return false
-    });
+    return oboPromise;
   }
 };

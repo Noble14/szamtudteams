@@ -1,37 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script
-      src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
-      integrity="sha384-xnsUQ1tUqsrutBJl0vuf4/hufzLFWW8ZhGnhItfpQ0/BtWgM2uw6YT6BQ5YaKBSM"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
+        integrity="sha384-xnsUQ1tUqsrutBJl0vuf4/hufzLFWW8ZhGnhItfpQ0/BtWgM2uw6YT6BQ5YaKBSM"
+        crossorigin="anonymous"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script type="text/javascript" src="../scripts/sso.js"></script>
 </head>
+
 <body>
     <p id="prompt">ssso</p>
     <div id="logs"></div>
+    <div id="users"></div>
+    <a href="/static/index.html">kattints ide</a>
 
     <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', () => {
-    var value = ssoAuth();
-    console.log(value)
-    console.log(value["token"])
-    console.log(value["tid"])
-    var socket = io({
-        extraHeaders : {
-            "token" : value.token,
-            "tid" : value.tid,
-        }
-    })
-    socket.on('connect', () => {
-        console.log("connected to server")
-    })
-    });
+        document.addEventListener('DOMContentLoaded', () => {
+            var value = ssoAuth();
+            var users = document.getElementById("users")
+
+            getClientSideToken().then(token => {
+                microsoftTeams.app.initialize().then(() => {
+                    microsoftTeams.app.getContext().then((context) => {
+                        var tid = context.user.tenant.id
+                        var socket = io({
+                            auth: {
+                                "token": token,
+                                "tid": tid,
+                            }
+                        })
+                        socket.on('connect', () => {
+                            console.log("connected to server")
+                            socket.on('new-user' , x => {
+                                console.log(x)
+                                x.forEach(e => {
+                                    let p = document.createElement("p")
+                                    users.append(p)
+                                });
+                            }) 
+                        })
+                    })
+                })
+            })
+        });
     </script>
 </body>
+
 </html>
