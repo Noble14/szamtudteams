@@ -436,9 +436,65 @@ function lumos(m=""){
 	}
 	
 }
+
+function getClientSideToken() {
+    return new Promise((resolve, reject) => {
+		microsoftTeams.app.initialize().then(() => {
+			microsoftTeams.authentication.getAuthToken().then((result) => {
+				resolve(result);
+			}).catch((error) => {
+				reject("Error getting token: " + error);
+			});
+		})
+    });
+}
+
+function joinWebSocket() {
+	getClientSideToken().then(token => {
+		microsoftTeams.app.initialize().then(() => {
+			microsoftTeams.app.getContext().then((context) => {
+				var tid = context.user.tenant.id
+				var url = new URL(window.location.href)
+				var roomForSocket = url.pathname
+				console.log("hello")
+				console.log(roomForSocket)
+				var socket = io({
+					auth: {
+						"token": token,
+						"tid": tid,
+					},
+					extraHeaders : {
+						"room" : roomForSocket
+					}
+				})
+				socket.on('connect', () => {
+					console.log("connected to server")
+					socket.on('new-user' , x => {
+						console.log(x)
+						x.forEach(e => {
+							let p = document.createElement("p")
+							p.innerText = e
+							console.log(p)
+						});
+					}) 
+				})
+			})
+		})
+	})
+}
 window.addEventListener('load',() => { 
-	const script = document.createElement("script")
-	script.src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
-	document.head.appendChild(script)
+	const msScript = document.createElement("script")
+	const ioScript = document.createElement("script")
+	msScript.src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
+	ioScript.src="https://cdn.socket.io/4.5.4/socket.io.min.js"
+	document.head
+			.appendChild(msScript)
+			.appendChild(ioScript)
+	msScript.addEventListener('load', () => {
+		ioScript.addEventListener('load', () => {
+			console.log("library looaded")
+			joinWebSocket()
+		})
+	})
 	preprocess() 
   }, false);

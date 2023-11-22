@@ -25,6 +25,8 @@ module.exports.setup = function (app, io) {
   io.use((socket, next) => {
     const token = socket.handshake.auth.token
     var tid = socket.handshake.auth.tid
+    var tid = socket.handshake.auth.tid
+    var roomForSocket = socket.handshake.headers.room
     AuthUser(tid, token).then(x => {
       var user = {
         id : socket.id,
@@ -32,7 +34,7 @@ module.exports.setup = function (app, io) {
         tid : tid,
         name : x.displayName,
         mail : x.mail,
-        page : "null"
+        room : roomForSocket
       }
       console.log(user)
       users.push(user)
@@ -45,16 +47,23 @@ module.exports.setup = function (app, io) {
 
   io.on('connection', (socket) => {
     console.log(`New user connected ${socket.id}`);
-    var userNames = users.map(x => x.name)
-    io.emit("new-user", userNames)
+    var room = socket.handshake.headers.room
+    socket.join(room)
+    var userNames = users
+                    .filter(x => x.room == room)
+                    .map(x => x.name)
+    
+    io.to(room).emit("new-user", userNames)
 
     // Handle user disconnect
     socket.on('disconnect', () => {
       console.log(`User disconnected ${socket.id}`);
       var ind = users.findIndex(x => x.id == socket.id)
       users.splice(ind, 1)
-      var userNames = users.map(x => x.name)
-      io.emit("new-user", userNames)
+      var userNames = users
+                      .filter(x => x.room == room)
+                      .map(x => x.name)
+      io.to(room).emit("new-user", userNames)
     });
   });
   const authorizeMiddleware = (req, res, next) => {
@@ -77,6 +86,9 @@ module.exports.setup = function (app, io) {
 
   app.get('/hello', function (req, res) {
     res.sendFile(path.join(__dirname, '../client/views/hello.html'));
+  });
+  app.get('/ok', function (req, res) {
+    res.sendFile(path.join(__dirname, '../client/views/ok.html'));
   });
   app.get('/sso', function (req, res) {
     res.sendFile(path.join(__dirname, '../client/views/sso.html'));
