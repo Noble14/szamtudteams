@@ -49,8 +49,19 @@ const Syllabus = {
 	"Checklist az második ZH- hoz": new Date('2023-03-20'),      
 
 };
+
+var socket;
+
 function preprocess(){
 	hideTOC();
+	const title = document.querySelector("h1")
+	const parent = title.parentNode
+	console.log(parent)
+
+	var activeUsersDiv = document.createElement("div")
+	activeUsersDiv.id = "activeUsers"
+
+	parent.insertBefore(activeUsersDiv, title)
 	
 	let ps=document.querySelectorAll("p");
 	let taskCount=0;
@@ -78,8 +89,7 @@ function preprocess(){
 			ps[i].appendChild(t);
 			ps[i].appendChild(teamsButton);
 			ps[i].innerHTML+=text;
-			ps[i].addEventListener("click", taskClicked);
-			teamsButton.addEventListener("click", callClicked);
+			//ps[i].addEventListener("click", taskClicked);
 		}
 		else if(ps[i].innerHTML.indexOf("(!Vid)")==0){
 			let text=ps[i].innerText;
@@ -115,7 +125,7 @@ function preprocess(){
 			ps[i].appendChild(t);
 			ps[i].innerHTML+=text;
 			ps[i].appendChild(p);
-			ps[i].addEventListener("click", taskClicked);
+			//ps[i].addEventListener("click", taskClicked);
 		}
 	}
 	
@@ -171,30 +181,41 @@ function preprocess(){
 	
 }
 function callClicked(e) {
+	console.log("call clicked")
 	microsoftTeams.app.initialize().then(x => {
 		microsoftTeams.authentication.getAuthToken({scopes : ["OnlineMeetings.ReadWrite"]}).then((result) => {
 			microsoftTeams.app.getContext().then((context) => {
 				tid = context.user.tenant.id
-				fetch('/startMeeting', {
-					method: 'post',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						'tid': tid,
-						'token': result
-					}),
-					mode: 'cors',
-					cache: 'default'
-				}).then( response =>  {
-					if (response.error) {
-						console.log(error)
-					} else {
-						return response.json()
-					}
-				}).then(data =>{
-					console.log(data.joinUrl)
-				})
+//				fetch('/startMeeting', {
+//					method: 'post',
+//					headers: {
+//						'Content-Type': 'application/json'
+//					},
+//					body: JSON.stringify({
+//						'tid': tid,
+//						'token': result
+//					}),
+//					mode: 'cors',
+//					cache: 'default'
+//				}).then( response =>  {
+//					if (response.error) {
+//						console.log(error)
+//					} else {
+//						return response.json()
+//					}
+//				}).then(data =>{
+//					console.log(data.joinUrl)
+//					window.location.replace(data.joinUrl)
+					
+//				})
+				var meetingData = {
+					"tid" :  tid,
+					"subject" : "Help me",
+					"token" : result
+				}
+				console.log("sending message")
+				console.log(socket)
+				socket.emit("startMeeting", meetingData)
 			})
 		})
 	})
@@ -206,7 +227,7 @@ function taskClicked(e) {
         el = el.parentNode; //
     }
 
-	callClicked(e)
+	callClicked()
     let ele = el; //.firstChild
     console.log(e.target.id + " was clicked");
     let newStatus = "";
@@ -448,8 +469,29 @@ function getClientSideToken() {
 		})
     });
 }
+function getMeetingDetails() {
+  console.log("get meeting clicked");
 
+  return new Promise((resolve) => {
+    microsoftTeams.app.initialize().then(() => {
+      microsoftTeams.authentication.getAuthToken({
+        scopes: ["OnlineMeetings.ReadWrite"],
+      }).then((result) => {
+        microsoftTeams.app.getContext().then((context) => {
+          const tid = context.user.tenant.id;
+          const meetingData = {
+            tid: tid,
+            subject: "Help me",
+            token: result,
+          };
+          resolve(meetingData);
+        });
+      });
+    });
+  });
+}
 function joinWebSocket() {
+	var activeUsers = document.getElementById("activeUsers")
 	getClientSideToken().then(token => {
 		microsoftTeams.app.initialize().then(() => {
 			microsoftTeams.app.getContext().then((context) => {
@@ -470,31 +512,56 @@ function joinWebSocket() {
 				socket.on('connect', () => {
 					console.log("connected to server")
 					socket.on('new-user' , x => {
-						console.log(x)
+						activeUsers.innerHTML=""
 						x.forEach(e => {
 							let p = document.createElement("p")
 							p.innerText = e
+							activeUsers.appendChild(p)
 							console.log(p)
 						});
 					}) 
+					const buttons = document.querySelectorAll("button")
+					buttons.forEach(x => {
+						x.addEventListener('click', ()  => {
+							getMeetingDetails().then(details =>socket.emit("start-meeting", details))
+						})
+					})
+					socket.on("meeting-started", (url, targets) => {
+						console.log(url)
+						//window.open(url, '_blank')
+						//window.location.replace()
+						console.log(targets)
+					})
+					socket.on("place-call", (targets => {
+						microsoftTeams.call.startCall({"targets" : targets})
+						                   .then(x => console.log("sikeres hivas"))
+										   .catch(x => console.log(x))
+
+					}))
 				})
+				return socket;
 			})
 		})
 	})
 }
-window.addEventListener('load',() => { 
-	const msScript = document.createElement("script")
-	const ioScript = document.createElement("script")
-	msScript.src="https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"
-	ioScript.src="https://cdn.socket.io/4.5.4/socket.io.min.js"
-	document.head
-			.appendChild(msScript)
-			.appendChild(ioScript)
-	msScript.addEventListener('load', () => {
-		ioScript.addEventListener('load', () => {
-			console.log("library looaded")
-			joinWebSocket()
-		})
+function loadScript(src) {
+	return new Promise((resolve, reject) => {
+		const script = document.createElement("script")
+		script.src=src
+		document.head.appendChild(script)
+		script.onload = () => resolve(script)
+		script.onerror = () => reject(new Error(`failed to load: ${src}`))
 	})
+}
+window.addEventListener('load',() => { 
 	preprocess() 
+	Promise.all([
+		loadScript("https://res.cdn.office.net/teams-js/2.9.1/js/MicrosoftTeams.min.js"),
+		loadScript("https://cdn.socket.io/4.5.4/socket.io.min.js"),
+	]).then((scripts) => {
+		console.log("Libraries loaded")
+		socket = joinWebSocket()
+	}).catch(error => {
+		console.error("Failed to load: " + error)
+	})
   }, false);

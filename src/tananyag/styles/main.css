@@ -379,3 +379,22 @@ nav svg{
     color: transparent;
     overflow: hidden;
 }
+/*
+#breadcrumb {
+    display: flex;
+    justify-content: space-between;
+
+}
+#breadcrumb ul:first-child{
+    align-self: flex-start;
+}
+*/
+#activeUsers {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+
+}
+#activeUsers > p {
+    writing-mode: vertical-rl;
+}

@@ -62,6 +62,7 @@ function ssoAuth() {
     function useServerSideToken(data) {
 
         display("2. Call https://graph.microsoft.com/v1.0/me/ with the server side token");
+        window.location.replace("/static")
 
         return display(JSON.stringify(data, undefined, 4), 'pre');
     }

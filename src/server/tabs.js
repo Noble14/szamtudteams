@@ -5,7 +5,8 @@ const fetch = require("node-fetch");
 var config = require('config');
 const msal = require('@azure/msal-node');
 const c = require('config');
-const {Client, LogLevel } = require('@microsoft/microsoft-graph-client')
+const {Client, LogLevel } = require('@microsoft/microsoft-graph-client');
+const { resourceUsage } = require('process');
 
 module.exports.setup = function (app, io) {
   var express = require('express')
@@ -34,9 +35,10 @@ module.exports.setup = function (app, io) {
         tid : tid,
         name : x.displayName,
         mail : x.mail,
-        room : roomForSocket
+        room : roomForSocket,
+        user_id : x.id
       }
-      console.log(user)
+      socket.email = x.mail
       users.push(user)
       next();
     }, err => {
@@ -46,14 +48,75 @@ module.exports.setup = function (app, io) {
   })
 
   io.on('connection', (socket) => {
-    console.log(`New user connected ${socket.id}`);
     var room = socket.handshake.headers.room
+    console.log(`New user connected ${socket.id} in room: ${room}`);
     socket.join(room)
     var userNames = users
                     .filter(x => x.room == room)
                     .map(x => x.name)
     
     io.to(room).emit("new-user", userNames)
+
+    socket.on('start-meeting', meetingData => {
+      var tid = meetingData.tid
+      var token =meetingData.token
+      var scopes = ["https://graph.microsoft.com/OnlineMeetings.ReadWrite",
+                    "https://graph.microsoft.com/User.Read"];
+
+      console.log("meeting starting")
+
+      msalClient.acquireTokenOnBehalfOf({
+        authority: `https://login.microsoftonline.com/${tid}`,
+        oboAssertion: token,
+        scopes: scopes,
+      }).then(result => { 
+        const client = Client.init({
+          defaultVersion: "v1.0",
+          debugLogging: true,
+          authProvider: (done) => {
+            done(null, result.accessToken);
+          },
+        });
+        var attendees = users
+                        .filter(x => x.room == room)
+                        .map(x => {
+                          return {
+                            "upn" : x.mail,
+                            "identity" : {
+                              "user" : {
+                                "id" : x.user_id,
+                                "tenantId" : tid,
+                                "displayName" : x.name
+                              }
+                            }
+                          }
+                        })
+        console.log(attendees)
+        console.log("server side token")
+        console.log(result)
+        const onlineMeeting = {
+          subject : meetingData.subject,
+          participants : {
+            "attendees" : attendees
+          }
+        }
+        client
+          .api("/me/onlineMeetings")
+          .post(onlineMeeting)
+          .then(response => {
+            console.log(`siker\n${JSON.stringify(response, null, 2)}` ); 
+            var targets = attendees.filter(x => x.upn != socket.email).map(x => x.upn)
+            io.to(room).emit("meeting-started", response.joinUrl)
+            socket.emit("place-call", targets)
+          })
+          .catch(err => {
+            console.error("error creating online meeting: ", err)
+            res.status(500).json({error: "error while getting token"})
+            io.to(room).emit("meeting-failed", "error while getting token")
+          })
+      })
+
+    })
 
     // Handle user disconnect
     socket.on('disconnect', () => {
@@ -66,6 +129,7 @@ module.exports.setup = function (app, io) {
       io.to(room).emit("new-user", userNames)
     });
   });
+
   const authorizeMiddleware = (req, res, next) => {
     if (true) {
       next(); // User is authorized, continue to the next middleware
@@ -109,10 +173,6 @@ module.exports.setup = function (app, io) {
   app.post('/startMeeting', function (req, res) {
     var tid = req.body.tid;
     var token = req.body.token;
-    console.log("token helo")
-    console.log(token)
-    console.log("tid helo")
-    console.log(tid)
     var scopes = ["https://graph.microsoft.com/OnlineMeetings.ReadWrite",
                   "https://graph.microsoft.com/User.Read"];
 
