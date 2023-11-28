@@ -571,20 +571,74 @@ window.addEventListener('load',() => {
 				else {
 					console.log( "jajj")
 				}
-				microsoftTeams.conversations.openConversation({
-					"subEntityId":"task-1",
-					"entityId": "tabInstanceId-1", 
-					"channelId": context.channel.id,
-					"title": "Task Title",
-					onStartConversation: (conversationResponse) => {
-						console.log("okesokes")
-						console.log(conversationResponse)
+				var url = new URL(window.location.href)
+				var path = url.pathname
+				const modified_url = path.replaceAll("/", "@")
+
+				getChatId(modified_url).then(r => {
+					const callBackConversation = function (convResp) {
+						console.log(convResp.conversationId)
+						postChatId(modified_url, convResp.conversationId).then(r => {
+							console.log("conv id: ", r)
+						})
 					}
+					console.log(r)
+					
+					console.log("ok")
+					microsoftTeams.conversations.openConversation({
+						"conversationId" : r == false ? "" : r,
+						"subEntityId":"task-1",
+						"entityId": path, 
+						"channelId": context.channel.id,
+						"title": "Chat ablak",
+						onStartConversation: callBackConversation
+					})
+						//onStartConversation: callBackConversation
 				})
 			})
 		})
-
-	}
-
-	)
+	})
   }, false);
+
+  function getChatId(path) {
+	return new Promise((resolve, reject)=> {
+		fetch(`/conversation/${path}`, {
+			method: 'get',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			mode: 'cors',
+			cache: 'default'
+		}).then( response =>  { 
+			if (response.ok)
+				return response.json()
+			else
+				reject(response.error)
+		}).then(respJson => {
+			resolve(respJson)
+		})
+	})
+  }
+  function postChatId(path, id) {
+	return new Promise((resolve, reject)=> {
+		fetch(`/conversation`, {
+			method: 'post',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				'path' : path,
+				'id' : id
+			}),
+			mode: 'cors',
+			cache: 'default'
+		}).then( response =>  { 
+			if (response.ok)
+				return response.json()
+			else
+				reject(response.error)
+		}).then(respJson => {
+			resolve(respJson)
+		})
+	})
+  }

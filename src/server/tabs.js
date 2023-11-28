@@ -5,6 +5,8 @@ const fetch = require("node-fetch");
 var config = require('config');
 const c = require('config');
 const graph = require('./graph')
+const fs = require('fs');
+const { json } = require('body-parser');
 
 module.exports.setup = function (app, users) {
   var express = require('express')
@@ -64,6 +66,28 @@ module.exports.setup = function (app, users) {
     var clientId = config.get("tab.appId");
     res.render('auth-end', { clientId: clientId });
   });
+  app.get('/conversation/:entity', function (req, res) {
+    const entity = req.params.entity.replaceAll('@', '/')
+    const maybeId = getIdToChatPath(entity)
+    res.json(maybeId)
+  });
+  app.post('/conversation', function (req, res) {
+    const filePath = path.join(__dirname, 'data.json')
+    const data = fs.readFileSync(filePath, 'utf-8')
+    const jsonD = JSON.parse(data)
+    const entity = req.body.path.replaceAll("@", "/")
+    const id = req.body.id
+
+    if (jsonD.hasOwnProperty(entity))
+      res.status(400).json("already exists")
+    
+    jsonD[entity] = {
+      'conversationId' : id
+    }
+    const jsonString = JSON.stringify(jsonD, null, 2)
+    fs.writeFileSync(filePath, jsonString, 'utf-8')
+    res.json("ok")
+  });
 
   // ------------------
   app.post('/getProfileOnBehalfOf', function (req, res) {
@@ -91,4 +115,16 @@ module.exports.setup = function (app, users) {
     graph.startMeeting(tid, token, meeting)
 
   })
+  function getIdToChatPath(entity) {
+    const filePath = path.join(__dirname, 'data.json')
+    const data = fs.readFileSync(filePath, 'utf-8')
+    const jsonD = JSON.parse(data)
+    console.log('json:' , jsonD)
+    console.log(entity)
+    if (jsonD.hasOwnProperty(entity))
+      {
+        return jsonD[entity]["conversationId"]
+      }
+    return false
+  }
 };
