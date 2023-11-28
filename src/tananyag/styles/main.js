@@ -563,5 +563,28 @@ window.addEventListener('load',() => {
 		socket = joinWebSocket()
 	}).catch(error => {
 		console.error("Failed to load: " + error)
-	})
+	}).then( () => {
+		microsoftTeams.app.initialize().then( ()  => {
+			microsoftTeams.app.getContext().then(context =>{
+				if(context?.page?.id) 
+				console.log(context.channel.id)
+				else {
+					console.log( "jajj")
+				}
+				microsoftTeams.conversations.openConversation({
+					"subEntityId":"task-1",
+					"entityId": "tabInstanceId-1", 
+					"channelId": context.channel.id,
+					"title": "Task Title",
+					onStartConversation: (conversationResponse) => {
+						console.log("okesokes")
+						console.log(conversationResponse)
+					}
+				})
+			})
+		})
+
+	}
+
+	)
   }, false);

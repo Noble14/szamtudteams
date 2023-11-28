@@ -17,7 +17,10 @@
     <div id="logs"></div>
     <div id="users"></div>
     <a href="/static/index.html">kattints ide</a>
-
+    <form id="hiddenForm" action="/static/index.html" method="get" style="display: none;">
+        <input type="hidden" name="tid" id="tidInput">
+        <input type="hidden" name="token" id="tokenInput"> 
+    </form>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', () => {
             var value = ssoAuth();

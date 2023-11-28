@@ -8,7 +8,7 @@ function ssoAuth() {
 
         return new Promise((resolve, reject) => {
             display("1. Get auth token from Microsoft Teams");
-            
+
             microsoftTeams.authentication.getAuthToken().then((result) => {
                 display(result);
 
@@ -26,34 +26,28 @@ function ssoAuth() {
             microsoftTeams.app.getContext().then((context) => {
                 tid = context.user.tenant.id
                 console.log(tid)
-                fetch('/getProfileOnBehalfOf', {
-                    method: 'post',
+                fetch('/static', {
+                    method: 'get',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        "token":  clientSideToken,
+                        "tid" : tid
                     },
-                    body: JSON.stringify({
-                        'tid': context.user.tenant.id,
-                        'token': clientSideToken
-                    }),
                     mode: 'cors',
                     cache: 'default'
                 })
-                .then((response) => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        reject(response.error);
-                    }
-                })
-                .then((responseJson) => {
-                    if (responseJson.error) {
-                        reject(responseJson.error);
-                    } else {
-                        const profile = responseJson;
-
-                        resolve(profile);
-                    }
-                });
+                    //.then((response) => {
+                        //console.log(response)
+                        //if (response.ok) {
+                            //return response.json()
+                        //} else {
+                            //reject(response.error);
+                        //}
+                    //})
+                    //.then((responseJson) => {
+                        //console.log(responseJson)
+                        //resolve(responseJson.text());
+                    //}).catch(error => console.log(error));
             });
         });
     }
@@ -62,7 +56,23 @@ function ssoAuth() {
     function useServerSideToken(data) {
 
         display("2. Call https://graph.microsoft.com/v1.0/me/ with the server side token");
-        window.location.replace("/static")
+//        getClientSideToken().then(x =>
+//            microsoftTeams.app.getContext().then((context) => {
+//                tid = context.user.tenant.id
+//                fetch('/static', {
+//                    method: 'GET',
+//                    headers: {
+//                        'Content-Type': 'application/json'
+//                    },
+//                    body: JSON.stringify({
+//                        'tid': tid,
+//                        'token': x
+//                    }),
+//                    mode: 'cors',
+//                    cache: 'default'
+//                })
+//            })
+//        )
 
         return display(JSON.stringify(data, undefined, 4), 'pre');
     }
@@ -75,19 +85,20 @@ function ssoAuth() {
                 width: 600,
                 height: 535
             })
-            .then((result) => {
-                let tokenData = result;
-                resolve(tokenData);
-            }).catch((reason) => {
-                reject(JSON.stringify(reason));
-            });
+                .then((result) => {
+                    let tokenData = result;
+                    resolve(tokenData);
+                }).catch((reason) => {
+                    reject(JSON.stringify(reason));
+                });
         });
     }
     function getTid() {
         microsoftTeams.app.initialize().then(() => {
             microsoftTeams.app.getContext().then((context) => {
                 return context.user.tenant.id
-        })})
+            })
+        })
     }
 
     // Add text to the display in a <p> or other HTML element
@@ -111,7 +122,7 @@ function ssoAuth() {
                     return getServerSideToken(clientSideToken);
                 })
                 .then((profile) => {
-                    return useServerSideToken(profile);
+                     console.log(profile)
                 })
                 .catch((error) => {
                     if (error === "invalid_grant") {
@@ -148,14 +159,21 @@ function ssoAuth() {
             console.error(error);
         });
     });
-    getClientSideToken().then(x =>  {
-        return({
+    getClientSideToken().then(x => {
+        return ({
             'tid': getTid(),
             'token': x
-            })},
+        })
+    },
         err => err)
 }
-function authUser (clientSideToken) {
+function submitForm(tid, clientSideToken) {
+  document.getElementById('tidInput').value = tid;
+  console.log(document.getElementById('tidInput').value)
+  document.getElementById('tokenInput').value = clientSideToken;
+  document.getElementById('hiddenForm').submit();
+}
+function authUser(clientSideToken) {
     return new Promise((resolve, reject) => {
         microsoftTeams.app.getContext().then((context) => {
             fetch('/', {
@@ -172,22 +190,22 @@ function authUser (clientSideToken) {
                 mode: 'cors',
                 cache: 'default'
             })
-            .then((response) => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    reject(response.error);
-                }
-            })
-            .then((responseJson) => {
-                if (responseJson.error) {
-                    reject(responseJson.error);
-                } else {
-                    const profile = responseJson;
+                .then((response) => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        reject(response.error);
+                    }
+                })
+                .then((responseJson) => {
+                    if (responseJson.error) {
+                        reject(responseJson.error);
+                    } else {
+                        const profile = responseJson;
 
-                    resolve(profile);
-                }
-            });
+                        resolve(profile);
+                    }
+                });
         });
     });
 }
@@ -195,7 +213,7 @@ function authUser (clientSideToken) {
 function getClientSideToken() {
 
     return new Promise((resolve, reject) => {
-        
+
         microsoftTeams.authentication.getAuthToken().then((result) => {
 
             resolve(result);
