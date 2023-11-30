@@ -78,7 +78,9 @@ function startMeeting(tid, token, onlineMeeting) {
             authority: `https://login.microsoftonline.com/${tid}`,
             oboAssertion: token,
             scopes: scopes,
+            skipCache : false
         }).then(result => {
+            console.log(result)
             const client = Client.init({
                 defaultVersion: "v1.0",
                 debugLogging: true,
@@ -86,15 +88,13 @@ function startMeeting(tid, token, onlineMeeting) {
                     done(null, result.accessToken);
                 },
             });
+            console.log(JSON.stringify(onlineMeeting, null, 6))
             client
                 .api("/me/onlineMeetings")
                 .post(onlineMeeting)
+                .catch(err => {console.log(err); reject(err)} )
                 .then(response => {
-                    if (response.ok)
-                        return response.json()
-                    else
-                        throw (`Error ${response.status}: ${response.statusText}`);})
-                .then(x => resolve(x))
+                    resolve(response) })
         })
         .catch(err => {
             console.error("error creating online meeting: ", err)

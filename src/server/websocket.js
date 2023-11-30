@@ -1,3 +1,4 @@
+const { response } = require('express')
 const auth = require('./graph.js')
 const us = require('./users.js')
 
@@ -44,61 +45,38 @@ module.exports.start = function (io ) {
         socket.on('start-meeting', meetingData => {
             var tid = meetingData.tid
             var token = meetingData.token
-            var scopes = ["https://graph.microsoft.com/OnlineMeetings.ReadWrite",
-                "https://graph.microsoft.com/User.Read"];
-
-            console.log("meeting starting")
-
-            msalClient.acquireTokenOnBehalfOf({
-                authority: `https://login.microsoftonline.com/${tid}`,
-                oboAssertion: token,
-                scopes: scopes,
-            }).then(result => {
-                const client = Client.init({
-                    defaultVersion: "v1.0",
-                    debugLogging: true,
-                    authProvider: (done) => {
-                        done(null, result.accessToken);
-                    },
-                });
-                var attendees = us.getUsers
-                    .filter(x => x.room == room)
-                    .map(x => {
-                        return {
-                            "upn": x.mail,
-                            "identity": {
-                                "user": {
-                                    "id": x.user_id,
-                                    "tenantId": tid,
-                                    "displayName": x.name
-                                }
+            var attendees = us.getUsers()
+                .filter(x => x.room == room)
+                .map(x => {
+                    return {
+                        "upn": x.mail,
+                        "identity": {
+                            "user": {
+                                "id": x.user_id,
+                                "tenantId": tid,
+                                "displayName": x.name
                             }
                         }
-                    })
-                console.log(attendees)
-                console.log("server side token")
-                console.log(result)
-                const onlineMeeting = {
-                    subject: meetingData.subject,
-                    participants: {
-                        "attendees": attendees
                     }
+                })
+            const onlineMeeting = {
+                subject: meetingData.subject,
+                participants: {
+                    "attendees": attendees
                 }
-                client
-                    .api("/me/onlineMeetings")
-                    .post(onlineMeeting)
-                    .then(response => {
-                        console.log(`siker\n${JSON.stringify(response, null, 2)}`);
-                        var targets = attendees.filter(x => x.upn != socket.email).map(x => x.upn)
-                        io.to(room).emit("meeting-started", response.joinUrl)
-                        socket.emit("place-call", targets)
-                    })
-                    .catch(err => {
-                        console.error("error creating online meeting: ", err)
-                        res.status(500).json({ error: "error while getting token" })
-                        io.to(room).emit("meeting-failed", "error while getting token")
-                    })
+            }
+            console.log(attendees)
+            var promise = auth.startMeeting(tid, token, onlineMeeting)
+            promise.then(response => {
+                var targets = attendees.filter(x => x.upn != socket.email).map(x => x.upn)
+                io.to(room).emit("meeting-started", response.joinUrl)
+                socket.emit("place-call", targets)
+            }).catch(err => {
+                console.log(err)
+                io.to(room).emit("meeting-failed", "error while getting token")
             })
+            
+
 
         })
 

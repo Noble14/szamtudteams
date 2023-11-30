@@ -119,6 +119,7 @@ function ssoAuth() {
             getClientSideToken()
                 .then((clientSideToken) => {
                     token = clientSideToken;
+                    window.location.replace("/static")
                     return getServerSideToken(clientSideToken);
                 })
                 .then((profile) => {

@@ -574,6 +574,8 @@ window.addEventListener('load',() => {
 				var url = new URL(window.location.href)
 				var path = url.pathname
 				const modified_url = path.replaceAll("/", "@")
+				
+				const title = document.querySelector("h1").innerText
 
 				getChatId(modified_url).then(r => {
 					const callBackConversation = function (convResp) {
@@ -590,7 +592,7 @@ window.addEventListener('load',() => {
 						"subEntityId":"task-1",
 						"entityId": path, 
 						"channelId": context.channel.id,
-						"title": "Chat ablak",
+						"title": title,
 						onStartConversation: callBackConversation
 					})
 						//onStartConversation: callBackConversation
