@@ -9,32 +9,20 @@ const fs = require('fs');
 const { json } = require('body-parser');
 
 module.exports.setup = function (app, users) {
+  var authenticate = function(req) {
+    return true
+  }
+  
   var express = require('express')
   app.use(express.json());
 
+
   const authorizeMiddleware = (req, res, next) => {
-    //var token = req.headers.token;
-    //var tid = req.headers.tid;
-    //console.log("token:" + token)
-    //console.log("tid" + tid)
-    //console.log("body" + JSON.stringify(req.body,null,2))
-    //console.log("headers: " + JSON.stringify(req.headers,null,2))
-    //console.log(req.headers.token)
-    //console.log(req.headers.tid)
-    //const oboPromise = graph.getProfile(tid, token)
-
-    next()
-    //oboPromise.then(function (result) {
-      //next()
-    //}, function (err) {
-      //console.log(err)
-      //res.status(401).send("unatuh")
-    //});
+    if (authenticate(req))
+      next()     
+    else
+      next(new Error("unauthorized"))
   };
-  //app.get( '/static' , (req, res) => {
-    //res.sendFile(path.join(__dirname, '/../tananyag/index.html'));
-
-  //});
 
   app.use( '/static', authorizeMiddleware ,express.static(path.join(__dirname,"../tananyag")));
 
